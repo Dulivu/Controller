@@ -161,3 +161,44 @@ class Index extends Controller {
   }
 }
 ```
+
+## Llamadas AJAX
+Nuestro controlador puede devolver datos como cadena o formateada en JSON hacia una petición AJAX, el ejemplo siguiente usa en el cliente el framework [Mootools](http://mootools.net) para realizar la llamada.
+Si el método llamado devuelve algún valor el controlador devuelve al cliente solo lo del método y evita ejecutar el método 'load'.
+Si el valor devuelto es un objeto o un arreglo, el controlador automáticamente lo convertira a formato JSON.
+
+*Index.php*
+```php
+class Index extends Controller {
+  public function initialize () {
+    $this->con = new mysqli('localhost', 'user', 'pass', 'bd');
+  }
+  
+  public function getJSON ($uname) {
+    return $this->con->query("SELECT * FROM users WHERE uname = '$uname'")->fetch_assoc();
+  }
+}
+```
+Al presionar el botón 'send' inmediatamente se realiza una llamada, en la url se envía una variable 'request' que es el método que queremos que el controlador ejecute.
+
+*Index.tpl*
+```html
+<body>
+  <script>
+    window.addEvent('ready', function () {
+      $('send').addEvent('click', function () {
+        new Request({
+          url: '?request=getJSON',
+          data: {uname: $('uname').value},
+          onSuccess: function (r) {
+            $('response').set('html', r);
+          }
+        });
+      });
+    });
+  </script>
+  <input id="uname" />
+  <button id="send">Call</button>
+  <p id="response>/<p>
+</body>
+```

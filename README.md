@@ -185,15 +185,16 @@ Al presionar el botón 'send' inmediatamente se realiza una llamada, en la url s
 ```html
 <body>
   <script>
+    rq = new Request({
+      url: '?request=getJSON',
+      onSuccess: function (r) {
+        $('response').set('html', r);
+      }
+    });
+    
     window.addEvent('domready', function () {
       $('send').addEvent('click', function () {
-        new Request({
-          url: '?request=getJSON',
-          data: {uname: $('uname').value},
-          onSuccess: function (r) {
-            $('response').set('html', r);
-          }
-        });
+        rq.send({data: {uname: $('uname').value}})
       });
     });
   </script>

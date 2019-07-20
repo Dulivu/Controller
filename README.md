@@ -40,7 +40,7 @@ Es un método que hereda de la clase 'Controller', este se ejecuta automáticame
 
 *Index.php*
 ```php
-class Index exnteds Controller {
+class Index extends Controller {
   public $msg = 'Hola mundo!!';
   
   public function initialize () {

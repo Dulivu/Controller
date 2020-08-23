@@ -4,7 +4,7 @@ Controlador en PHP separa la vista de la lógica y ayuda a ordenar el código.
 ## Como utilizarlo
 + Una vez guardado el archivo en la carpeta que guste, solo debe importarla en el proyecto.
 + Cree un archivo '.php' con una clase que herede la funcionalidad del controlador.
-+ Cree un archivo '.tpl' con el mismo nombre de la clase creada.
++ Cree un archivo '.html' con el mismo nombre de la clase creada.
 + Ejecute el método estático heredado 'run'.
 
 *Index.php*
@@ -27,7 +27,7 @@ class Index extends Controller {
   public $msg = 'Hola mundo!!';
 }
 ```
-*Index.tpl*
+*Index.html*
 ```html
 <body>
   <p><?=$this->msg?></p>
@@ -53,7 +53,7 @@ Método que también hereda de la clase 'Controller', se ejecuta al final de la 
 
 *Index.php*
 ```php
-class Index exnteds Controller {
+class Index extends Controller {
   public $msg = 'Hola mundo!!';
   
   public function initialize () {
@@ -68,16 +68,16 @@ class Index exnteds Controller {
 ### Otros
 Cualquier otro método creado por nosotros puede ser ejecutado desde el cliente (el método llamado será ejecutado despues de 'initialize' y antes de 'load'), en la vista se debe crear un formulario con algunas carácteristicas específicas.
 + El formulario preferentemente debe enviar la información por POST.
-+ Por recomendación usar etiquetas 'button' en lugar del 'input[type=submit]' para el envío del formulario.
-+ El botón de envío debe tener por atributo 'name' el valor 'request'.
-+ El valor (value) del botón será el nombre del método que queremos ejecutar.
++ Por recomendación usar etiquetas 'button' en lugar del 'input[type="submit"]' para el envío del formulario.
++ El botón de envío debe tener un atributo [name="request"]
++ El botón de envío debe tener un atributo [value="metodo"], con el valor igual al método que desea ejecutar.
 
 *Index.php*
 ```php
 class Index exnteds Controller {
-  public $msg = 'Hola mundo!!';
-  
+
   public function initialize () {
+    $this->msg = 'Hola mundo!!';
     $this->con = new mysqli('localhost', 'user', 'pass', 'bd');
   }
   
@@ -97,7 +97,7 @@ class Index exnteds Controller {
   }
 }
 ```
-*Index.tpl*
+*Index.html*
 ```html
 <body>
   <form method="POST">
@@ -115,14 +115,14 @@ class Index exnteds Controller {
   		<button name="request" value="validar">Ingresar</button>
   	</p>
   
-  	<p style="color: red; font-weight: bold;"><?=$this->msg?></p>
+  	<p style="color: red; font-weight: bold;"><?= $this->msg ?></p>
   </form>
 </body>
 ```
 
 ## Cambiar la vista
-El controlador creado por defecto buscará un archivo '.tpl' con el mismo nombre de la clase si en algún momento queremos cargar otra plantilla lo hacemos por el atributo heredado '$_view'.
-Como ejemplo creamos otro archivo llamado 'Template.tpl' con cualquier contenido de prueba.
+El controlador creado por defecto buscará un archivo '.html' con el mismo nombre de la clase si en algún momento queremos cargar otra plantilla lo hacemos por el atributo heredado '$_view'.
+Como ejemplo creamos otro archivo llamado 'Template.html' con cualquier contenido de prueba.
 
 *Index.php*
 ```php
@@ -132,11 +132,12 @@ class Index extends Controller {
   }
 }
 ```
+Al llamar al método 'validate' el controlador no devolvera la vista por defecto 'Index.html'. Devolverá la vista 'Template.html'.
 
-## Plantilla maestra
-El controlador permite seleccionar una plantilla que cumpla la función de maestra, como ejemplo creamos un archivo llamado 'Master.tpl' con el siguiente contenido (dentro se coloca la variable '$__content__' que será la que llame a la plantilla hija).
+## Diseño (Layout)
+El controlador permite seleccionar una plantilla que cumpla la función de 'layout', como ejemplo creamos un archivo llamado 'Layout.html' con el siguiente contenido (dentro se coloca la variable '$__page__' que será la que llame a la plantilla hija).
 
-*Master.ptl*
+*Layout.html*
 ```html
 <html>
   <head>
@@ -144,62 +145,20 @@ El controlador permite seleccionar una plantilla que cumpla la función de maest
   </head>
   
   <body>
-    <?=$__content__?>
+    <?= $__page__ ?>
   </body>
 </html>
 ```
 
-Al controlador le indicamos que usará una plantilla maestra con la variable heredada '$_master'.
+Al controlador le indicamos que usará un diseño maestro con la variable heredada '$_layout'.
 
 *Index.php*
 ```php
 class Index extends Controller {
-  public $_master = 'Master.tpl';
+  public $_layout = 'Layout';
 
   public function validate () {
     $this->_view = 'Template';
   }
 }
-```
-
-## Llamadas AJAX
-Nuestro controlador puede devolver datos como cadena o formateada en JSON hacia una petición AJAX, el ejemplo siguiente usa en el cliente el framework [Mootools](http://mootools.net) para realizar la llamada.
-Si el método llamado devuelve algún valor el controlador devuelve al cliente solo lo del método y evita ejecutar el método 'load'.
-Si el valor devuelto es un objeto o un arreglo, el controlador automáticamente lo convertira a formato JSON.
-
-*Index.php*
-```php
-class Index extends Controller {
-  public function initialize () {
-    $this->con = new mysqli('localhost', 'user', 'pass', 'bd');
-  }
-  
-  public function getJSON ($uname) {
-    return $this->con->query("SELECT * FROM users WHERE uname = '$uname'")->fetch_assoc();
-  }
-}
-```
-Al presionar el botón 'send' inmediatamente se realiza una llamada, en la url se envía una variable 'request' que es el método que queremos que el controlador ejecute.
-
-*Index.tpl*
-```html
-<body>
-  <script>
-    rq = new Request({
-      url: '?request=getJSON',
-      onSuccess: function (r) {
-        $('response').set('html', r);
-      }
-    });
-    
-    window.addEvent('domready', function () {
-      $('send').addEvent('click', function () {
-        rq.send({data: {uname: $('uname').value}})
-      });
-    });
-  </script>
-  <input id="uname" />
-  <button id="send">Call</button>
-  <p id="response>/<p>
-</body>
 ```

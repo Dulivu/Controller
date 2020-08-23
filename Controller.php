@@ -139,11 +139,12 @@ abstract class Controller {
 		else throw new Exception("Template '{$__view}' not found");
 
 		if ($this->_layout) {
-			if (file_exists($this->_layout)) {
+			$__layout = $this->_layout.$this->_view_ext;
+			if (file_exists($__layout)) {
 				$__page__ = ob_get_clean();
-				include($this->_layout);
+				include($__layout);
 			}
-			else throw new Exception("Layout '{$this->_layout}' not found");
+			else throw new Exception("Layout '{$__layout}' not found");
 		}
 
 		return ob_get_clean();

@@ -101,21 +101,21 @@ class Index exnteds Controller {
 ```html
 <body>
   <form method="POST">
-  	<p>
-  		<label>Usuario:</label>
-  		<input name="uname" autofocus />
-  	</p>
+    <p>
+      <label>Usuario:</label>
+      <input name="uname" autofocus />
+    </p>
+ 
+    <p>
+      <label>Contraseña:</label>
+      <input name="upass" type="password"/>
+    </p>
   
-  	<p>
-  		<label>Contraseña:</label>
-  		<input name="upass" type="password"/>
-  	</p>
+    <p>
+      <button name="request" value="validar">Ingresar</button>
+    </p>
   
-  	<p>
-  		<button name="request" value="validar">Ingresar</button>
-  	</p>
-  
-  	<p style="color: red; font-weight: bold;"><?= $this->msg ?></p>
+    <p style="color: red; font-weight: bold;"><?= $this->msg ?></p>
   </form>
 </body>
 ```

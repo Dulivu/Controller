@@ -1,17 +1,78 @@
 <?php
 
+/**
+ * Permite separar la lógica de la vista
+ *
+ * @package 	Irbis-Controller
+ * @author		Jorge Luis Quico C. <GeorgeL1102@gmail.com>
+ * @version		2.0
+ */
 abstract class Controller {
-	public $_data = array();
-	public $_view = null;
-	public $_view_ext = 'tpl';
-	public $_view_path = '';
-	public $_master = null;
+
+	/**
+	 * Arreglo para almacenar todos los valores no accesibles
+	 * @var array
+	 */
+	private $_data = array();
+
+	/**
+	 * Nombre de la vista a usar, sino se establece
+	 * se llena con el nombre de la clase
+	 * @var string
+	 */
+	protected $_view = null;
+
+	/**
+	 * Extensión por defecto que usa para las vistas
+	 * @var string
+	 */
+	protected $_view_ext = 'html';
+
+	/**
+	 * Directorio de la vista, si no se establece
+	 * se buscará donde se encuentra la clase
+	 * @var string
+	 */
+	protected $_view_path = '';
+
+	/**
+	 * Diseño que usará la vista, el diseño deberá 
+	 * exponer una variable $__page__ que es la vista
+	 * principal
+	 * @var string
+	 */
+	protected $_layout = null;
+
+	/**
+	 * Contador de ejecuciones del controlador
+	 * si es mayor a 1 significa que un controlador
+	 * ya está preparando una respuesta
+	 * @var int
+	 */
 	public static $controller = 0;
 
+	/**
+	 * Es llamado siempre al inicio de cada petición
+	 */
+	public function initialize () {}
+
+	/**
+	 * Es llamado siempre al final de cada petición
+	 */
+	public function load () {}
+
+	/**
+	 * Establece valores no accesibles
+	 * los almacena en el arreglo '_data'
+	 */
 	public function __set ($name, $value) {
 		$this->_data[$name] = $value;
 	}
 
+	/**
+	 * Obtiene valores no accesibles
+	 * @return mix
+	 */
 	public function __get ($name) {
 		if (array_key_exists($name, $this->_data))
 			return $this->_data[$name];
@@ -22,140 +83,104 @@ abstract class Controller {
 		else return null;
 	}
 
-	public function request ($key) {
-		return isset($_POST[$key]) ? $_POST[$key] : isset($_GET[$key]) ? $_GET[$key] : null;
-	}
-
-	public function post ($key) {
+	/**
+	 * Obtiene un valor enviado por el cliente en el
+	 * cuerpo del documento POST
+	 * @param string $key
+	 * @return mix
+	 */
+	public function input ($key) {
 		return isset($_POST[$key]) ? $_POST[$key] : null;
 	}
 
-	public function get ($key) {
+	/**
+	 * Obtiene un valor enviado por el cliente en la 
+	 * ruta de consulta GET
+	 * @param string $key
+	 * @return GET
+	 */
+	public function query ($key) {
 		return isset($_GET[$key]) ? $_GET[$key] : null;
 	}
-
-	public function initialize () {}
-	public function load () {}
 	
-	public function merge ($arr) {
+	/**
+	 * Combina un arreglo con los datos no accesibles
+	 * @param array $arr
+	 */
+	public function merge (array $arr) {
 		if (gettype($arr) == 'array')
 			$this->_data = array_merge($this->_data, $arr);
 	}
 
-	public function loadTemplate () {
-		extract($this->_data);
+	/**
+	 * Ejecuta un método dentro de la clase y devuelve el resultado
+	 * si el método no existe lanza una expceción
+	 * @param string $method_name
+	 * @param array $args
+	 */
+	protected function exec (string $method_name, array $args) {
+		if(!method_exists($this, "$method_name")) {
+			throw new Exception("Method '$method_name' does not exist.");
+			return false;
+		}
+		return call_user_func_array(array($this, "$method_name"), $args);
+	}
+
+	/**
+	 * Renderiza la vista
+	 * @return string
+	 */
+	public function render () {
 		$__view = $this->_view ?: get_called_class();
 		$__view .= '.'.$this->_view_ext;
 		$__view = $this->_view_path.$__view;
 
-		if (File::exists($__view)) include($__view);
+		if (file_exists($__view)) include($__view);
 		else throw new Exception("Template '{$__view}' not found");
 
-		if ($this->_master) {
-			if (File::exists($this->_master)) {
-				$__content__ = ob_get_clean();
-				include($this->_master);
+		if ($this->_layout) {
+			if (file_exists($this->_layout)) {
+				$__page__ = ob_get_clean();
+				include($this->_layout);
 			}
-			else throw new Exception("Master template '{$this->_master}' not found");
+			else throw new Exception("Layout '{$this->_layout}' not found");
 		}
 
 		return ob_get_clean();
 	}
 
-	protected function exec ($method, $args) {
-		if(!method_exists($this, "$method")) {
-			throw new Exception("Method '$method' does not exist.");
-			return false;
-		}
-		return call_user_func_array(array($this, "$method"), $args);
-	}
-
+	/** 
+	 * Procesa una respuesta al cliente
+	 * @return string
+	 */
 	public static function run () {
 		$klass = get_called_class();
-		$pr = isset($GLOBALS['preventRun']) ? $GLOBALS['preventRun'] : false;
-		if ($pr) { $GLOBALS['preventRun'] = false; return;}
 		if (Controller::$controller++) return;
 
 		$page = new $klass;
 
-		$configFlag = false;
-		if (File::exists(__DIR__.'\\Main.php')) {
-			include_once(__DIR__.'\\Main.php');
-			$configFlag = true;
-		}
+		ob_start();
+		$page->initialize();
 
-		if (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'],'application/json') !== false) {
-			$raw = isset($HTTP_RAW_POST_DATA) ? $HTTP_RAW_POST_DATA : file_get_contents('php://input');
-			$arg = JSON::decode($raw, true);
-			$method = str_replace($_SERVER["SCRIPT_NAME"]."/", "", $_SERVER["REQUEST_URI"]);
-			header('Cache-Control: no-cache, must-revalidate');
-			header('Content-type: application/json; charset=utf-8');
-			try {
-				if ($configFlag && method_exists('Main', 'initialize')) Main::initialize($page);
-				$page->initialize();
+		$arr = $_POST + $_GET;
 
-				if (!method_exists($page, "_$method"))
-					throw new Exception("Method '$method' does not exist");
+		if (isset($arr['request']))	{
+			$m = $arr['request']; 
+			unset($arr['request']);
+			$r = $page->exec($m, $arr);
 
-				$r = call_user_func_array(array($page, "_$method"), $arg);
-				if ($configFlag && method_exists('Main', 'exec')) Main::exec($page, $r, $m, $arr);
-				header("HTTP/1.0 200 OK");
-				$t = gettype($r);
-				echo ($t == "array" || $t == "object") ? JSON::encode($r) : $r;
-			}
-			catch (Exception $e) {
-				header("HTTP/1.0 500 Internal server error");
-				echo json_encode(array(
-					"message" => $e->getMessage(),
-					"code" => $e->getCode(),
-					"file" => $e->getFile(),
-					"line" => $e->getLine(),
-					"stackTrace" => $e->getTrace()
-				));
+			if ($r !== null) {
+				$type = gettype($r);
+				if ($type == 'array' || $type == 'object')
+					$r = json_encode($r);
+				elseif ($type == 'boolean')
+					$r = $r ? 'true' : 'false';
+				die ($r."");
 			}
 		}
-		else {
-			try {
-				ob_start();
-				if ($configFlag && method_exists('Main', 'initialize')) Main::initialize($page);
-				$page->initialize();
 
-				$arr = $_POST + $_GET;
-
-				if (isset($arr['request']))	{
-					$m = $arr['request']; unset($arr['request']);
-					$r = $page->exec($m, $arr);
-					if ($configFlag && method_exists('Main', 'exec')) Main::exec($r, $m, $arr, $page);
-
-					if ($r !== null) {
-						$type = gettype($r);
-						if ($type == 'array' || $type == 'object')
-							$r = JSON::encode($r);
-						elseif ($type == 'boolean')
-							$r = $r ? 'true' : 'false';
-						die ($r."");
-					}
-				}
-
-				$page->load();
-				if ($configFlag && method_exists('Main', 'load')) Main::load($page);
-				header("Content-Type: text/html; charset=utf-8");
-				echo $page->loadTemplate();
-			}
-			catch (Exception $e) {
-				if ($configFlag && method_exists('Main', 'exception')) {
-					Main::exception($e, $page);
-					$page->load();
-					if ($configFlag && method_exists('Main', 'load')) Main::load($page);
-					header("Content-Type: text/html; charset=utf-8");
-					echo $page->loadTemplate();
-				}
-				else {
-					header("HTTP/1.0 500 Internal server error");
-					die ("Error: {$e->getMessage()} ");
-				}
-			}
-		}
+		$page->load();
+		echo $page->render();
 	}
 }
 

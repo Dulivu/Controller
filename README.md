@@ -34,7 +34,7 @@ class Index extends Controller {
 </body>
 ```
 
-## Método heredados
+## Métodos heredados
 ### Initialize
 Es un método que hereda de la clase 'Controller', este se ejecuta automáticamente al inicio de cada petición. Puede ser utilizado para inicializar variables o controllar el flujo inicial de la aplicación.
 
@@ -74,7 +74,7 @@ Cualquier otro método creado por nosotros puede ser ejecutado desde el cliente 
 
 *Index.php*
 ```php
-class Index exnteds Controller {
+class Index extends Controller {
 
   public function initialize () {
     $this->msg = 'Hola mundo!!';
